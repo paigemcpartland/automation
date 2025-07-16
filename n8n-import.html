@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>n8n Workflow Import</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background: #0052a3;
+        }
+        .url {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 n8n Workflow Import</h1>
+        
+        <p>Click the button below to automatically import your updated workflow:</p>
+        
+        <a href="https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json" 
+           class="button" target="_blank">
+            📥 Import Latest Workflow
+        </a>
+        
+        <p><strong>Or copy this URL to import manually:</strong></p>
+        <div class="url">
+            https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json
+        </div>
+        
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Click the button above (opens the workflow JSON)</li>
+            <li>Copy the URL from your browser</li>
+            <li>Go to your n8n instance</li>
+            <li>Navigate to Workflows</li>
+            <li>Click "Import from URL"</li>
+            <li>Paste the URL and click Import</li>
+        </ol>
+        
+        <p><em>💡 Bookmark this page for quick access!</em></p>
+    </div>
+    
+    <script>
+        // Auto-copy URL to clipboard when page loads
+        window.addEventListener('load', function() {
+            const url = 'https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json';
+            
+            // Show notification
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(function() {
+                    console.log('URL copied to clipboard');
+                });
+            }
+        });
+    </script>
+</body>
+</html> 

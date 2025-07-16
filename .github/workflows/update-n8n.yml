@@ -1,0 +1,54 @@
+name: Update n8n Workflow
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'My workflow 2 (26).json'
+
+jobs:
+  notify-n8n:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Notify n8n to update workflow
+      run: |
+        echo "🔄 n8n Workflow Updated!"
+        echo ""
+        echo "Your n8n workflow has been updated in GitHub."
+        echo "To sync the changes:"
+        echo ""
+        echo "1. Go to your n8n instance"
+        echo "2. Navigate to Workflows"
+        echo "3. Find your color report workflow"
+        echo "4. Click the three dots menu → 'Import from URL'"
+        echo "5. Use this URL:"
+        echo "   https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json"
+        echo "6. Click 'Import' to update the workflow"
+        echo ""
+        echo "✅ This will sync your latest workflow changes from Cursor!"
+        
+    - name: Create Issue Comment (Optional)
+      if: github.event_name == 'push'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const workflowUrl = 'https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🔄 **n8n Workflow Updated!**
+            
+            Your n8n workflow has been updated. To sync the changes:
+            
+            1. Go to your n8n instance
+            2. Navigate to Workflows  
+            3. Find your color report workflow
+            4. Click the three dots menu → 'Import from URL'
+            5. Use this URL: \`${workflowUrl}\`
+            6. Click 'Import' to update the workflow
+            
+            ✅ This will sync your latest workflow changes from Cursor!`
+          }); 
