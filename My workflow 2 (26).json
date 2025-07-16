@@ -76,7 +76,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $credentials.n8n-api.baseUrl || 'http://localhost:5678' }}/api/v1/workflows",
+        "url": "http://localhost:5678/api/v1/workflows",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -86,7 +86,7 @@
             },
             {
               "name": "X-N8N-API-KEY",
-              "value": "={{ $credentials.n8n-api.apiKey }}"
+              "value": "your-n8n-api-key-here"
             }
           ]
         },
