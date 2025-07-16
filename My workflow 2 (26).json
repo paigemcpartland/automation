@@ -426,7 +426,7 @@
     {
       "parameters": {
         "mode": "raw",
-        "jsonOutput": "=={\n  \"id\":            \"{{ $json.id || 'client-001' }}\",\n  \"videoUrl\":      \"s3://color-reports-assets/IMG_8540_small.mp4\",\n  \"wowColors\":     {{ JSON.stringify($json.message.content.wowColors || []) }},\n  \"avoidColors\":   {{ JSON.stringify($json.message.content.avoidColors || []) }},\n  \"perColorNotes\": {{ JSON.stringify($json.message.content.perColorNotes || {}) }},\n  \"undertoneAnalysis\": {{ JSON.stringify($json.message.content.undertoneAnalysis || {}) }},\n  \"colorTimestamps\": {{ JSON.stringify($json.message.content.colorTimestamps || {}) }}\n}",
+        "jsonOutput": "=={\n  \"id\":            \"{{ $json.id || 'client-001' }}\",\n  \"videoUrl\":      \"s3://color-reports-assets/IMG_8540_small.mp4\",\n  \"wowColors\":     {{ JSON.stringify($json.message.content.wowColors || []) }},\n  \"avoidColors\":   {{ JSON.stringify($json.message.content.avoidColors || []) }},\n  \"perColorNotes\": {{ JSON.stringify($json.message.content.perColorNotes || {}) }},\n  \"undertoneAnalysis\": {{ JSON.stringify($json.message.content.undertoneAnalysis || {}) }},\n  \"colorTimestamps\": {{ JSON.stringify($json.message.content.colorTimestamps || {}) }},\n  \"season\":        \"{{ $json.message.content.season || '' }}\",\n  \"secondarySeason\": \"{{ $json.message.content.secondarySeason || 'none' }}\",\n  \"paletteNotes\":  \"{{ $json.message.content.paletteNotes || '' }}\",\n  \"makeupAdvice\":  \"{{ $json.message.content.makeupAdvice || '' }}\",\n  \"hairAdvice\":    \"{{ $json.message.content.hairAdvice || '' }}\",\n  \"clothingAdvice\": \"{{ $json.message.content.clothingAdvice || '' }}\"\n}",
         "includeOtherFields": true,
         "options": {}
       },
@@ -454,7 +454,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Generate PDF from HTML using a simple approach\nconst html = $json.html;\nconst clientId = $json.id || 'client-001';\nconst timestamp = new Date().toISOString().split('T')[0];\n\n// Create a downloadable HTML file that can be opened and printed as PDF\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"utf-8\">\n    <title>Color Report - ${clientId}</title>\n    <style>\n        @media print {\n            body { margin: 0; }\n            .no-print { display: none; }\n        }\n        .print-button {\n            position: fixed;\n            top: 20px;\n            right: 20px;\n            background: #007bff;\n            color: white;\n            padding: 10px 20px;\n            border: none;\n            border-radius: 5px;\n            cursor: pointer;\n            z-index: 1000;\n        }\n        .print-button:hover {\n            background: #0056b3;\n        }\n    </style>\n</head>\n<body>\n    <button class=\"print-button no-print\" onclick=\"window.print()\">🖨️ Print/Save as PDF</button>\n    ${html}\n</body>\n</html>`;\n\n// Create a data URL for the HTML file\nconst dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);\n\n// Create a downloadable filename\nconst filename = `color-report-${clientId}-${timestamp}.html`;\n\nreturn [{\n  json: {\n    html: html,\n    pdfDataUrl: dataUrl,\n    filename: filename,\n    downloadUrl: dataUrl,\n    message: `✅ Color report generated successfully!\\n\\n📄 To get PDF:\\n1. Click the download link below\\n2. Open the HTML file in your browser\\n3. Press Ctrl+P (or Cmd+P on Mac)\\n4. Choose 'Save as PDF' in the print dialog\\n\\n📁 Filename: ${filename}`\n  }\n}];"
+        "jsCode": "// Generate PDF from HTML using a simple approach\nconst html = $json.html;\nconst clientId = $json.id || 'client-001';\nconst timestamp = new Date().toISOString().split('T')[0];\n\n// Create a downloadable HTML file that can be opened and printed as PDF\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"utf-8\">\n    <title>Color Report - ${clientId}</title>\n    <style>\n        @media print {\n            body { margin: 0; }\n            .no-print { display: none; }\n        }\n        .print-button {\n            position: fixed;\n            top: 20px;\n            right: 20px;\n            background: #007bff;\n            color: white;\n            padding: 10px 20px;\n            border: none;\n            border-radius: 5px;\n            cursor: pointer;\n            z-index: 1000;\n        }\n        .print-button:hover {\n            background: #0056b3;\n        }\n    </style>\n</head>\n<body>\n    <button class=\"print-button no-print\" onclick=\"window.print()\">🖨️ Print/Save as PDF</button>\n    ${html}\n</body>\n</html>`;\n\n// Create a data URL for the HTML file\nconst dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);\n\n// Create a downloadable filename\nconst filename = `color-report-${clientId}-${timestamp}.html`;\n\nreturn [{\n  json: {\n    html: html,\n    pdfDataUrl: dataUrl,\n    filename: filename,\n    downloadUrl: dataUrl,\n    message: `✅ Color report generated successfully!\\n\\n📄 To get PDF:\\n1. Copy the data URL below\\n2. Paste it in your browser address bar\\n3. Press Enter to open the file\\n4. Press Ctrl+P (or Cmd+P on Mac)\\n5. Choose 'Save as PDF' in the print dialog\\n\\n📁 Filename: ${filename}\\n🔗 Data URL: ${dataUrl}`\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -464,6 +464,21 @@
       ],
       "id": "html-to-pdf-1",
       "name": "Generate PDF"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2720,
+        -1620
+      ],
+      "id": "respond-with-download",
+      "name": "Respond with Download Info"
     }
   ],
   "pinData": {
@@ -694,6 +709,17 @@
       ]
     },
     "Generate PDF": {
+      "main": [
+        [
+          {
+            "node": "Respond with Download Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond with Download Info": {
       "main": [
         []
       ]
