@@ -236,7 +236,7 @@
         "messages": {
           "values": [
             {
-              "content": "You are a professional colour-analysis assistant.\n\nRead the full consultation transcript (the user message) and produce **JSON only** – no extra commentary – that follows *exactly* this schema:\n\n{\n  \"season\":            \"<client's home season – one of: Dark/True/Soft Autumn, Dark/True/Soft Winter, Bright/Cool/Light Spring, Light/True/Bright Summer>\",\n  \"secondarySeason\":   \"<secondary season or \\\"none\\\">\",\n\n  \"wowColors\":         [ {\"color\": \"<best colour 1>\", \"note\": \"<1-sentence note from analyst>\"}, … max 6 ],  // now objects with notes\n  \"avoidColors\":       [ {\"color\": \"<worst colour 1>\", \"note\": \"<1-sentence note from analyst>\"}, … max 4 ],  // now objects with notes\n\n  \"perColorNotes\": {\n    \"<colour name>\":    \"<1-sentence note the analyst gave>\",   // only for colours actually discussed, excluding wow/avoid/undertone\n    …\n  },\n\n  \"undertoneAnalysis\": {  // new: separate undertone section\n    \"conclusion\": \"<cool, warm, or neutral undertone>\",\n    \"colors\": [ {\"color\": \"<undertone colour e.g. gold>\", \"note\": \"<1-sentence reaction>\"}, … ],  // typically gold/silver for temperature, black/brown for contrast\n    \"summary\": \"<1-paragraph explanation of undertone determination>\"\n  },\n\n  \"paletteNotes\":      \"<1-sentence summary of why this season suits the client>\",\n  \"makeupAdvice\":      \"<bullet-style list, max 250 chars>\",\n  \"hairAdvice\":        \"<bullet-style list, max 200 chars>\",\n  \"clothingAdvice\":    \"<bullet-style list, max 250 chars>\",\n\n  \"colorTimestamps\": { \n    \"<colour name>\": <midpoint timestamp in seconds as integer>,\n    … \n  }  // required: one entry for every unique color in wowColors, avoidColors, perColorNotes, undertoneAnalysis.colors\n}\n\nRules:\n1. **season** must be the single \"home season\" the analyst settled on (ignore candidates she rejected).\n2. Only include colours that the transcript clearly mentions.\n3. Respond with valid, minified JSON – no prose before or after.\n4. The transcript has utterances prefixed with [start-end s] Speaker: text. For colorTimestamps, for each unique color, identify the full discussion block: from the introduction utterance (e.g., \"Here comes [color].\", \"This is [color].\") to the last reaction/comparison utterance (e.g., containing keywords like 'see', 'look', 'wash', 'bright', 'shadow', 'yellowy', 'redness', 'glow', 'pretty', 'not for you'). Calculate the timestamp as Math.round(overall block midpoint) + 12 (to capture full drape and peak reaction; cap at block end or next color's start if exceeded). If no clear reaction, use introduction midpoint + 15. If multiple blocks, pick the primary one with strongest reaction. Use whole seconds.\n5. For wowColors and avoidColors, include a concise note from the analyst's reaction (e.g., \"Brightens eyes and evens skin\").\n6. Move gold, silver, black, brown (and similar undertone tests) to undertoneAnalysis; do not include in other sections.\n7. Normalize all color names to lowercase, no trailing spaces, replace multiple spaces with single (e.g., 'brick red' not 'brick red ').\n8. If a color discussion spans multiple utterances (e.g., introduction then separate reaction/comparison), treat as one block: use the overall start to end midpoint + 12.",
+              "content": "You are a professional colour-analysis assistant.\n\nRead the full consultation transcript (the user message) and produce **JSON only** – no extra commentary – that follows *exactly* this schema:\n\n{\n  \"season\":            \"<client's home season – one of: Dark/True/Soft Autumn, Dark/True/Soft Winter, Bright/Cool/Light Spring, Light/True/Bright Summer>\",\n  \"secondarySeason\":   \"<secondary season or \\"none\\">\",\n\n  \"wowColors\":         [ {\"color\": \"<best colour 1>\", \"note\": \"<1-sentence note from analyst>\"}, … max 6 ],  // now objects with notes\n  \"avoidColors\":       [ {\"color\": \"<worst colour 1>\", \"note\": \"<1-sentence note from analyst>\"}, … max 4 ],  // now objects with notes\n\n  \"perColorNotes\": {\n    \"<colour name>\":    \"<1-sentence note the analyst gave>\",   // only for colours actually discussed, excluding wow/avoid/undertone\n    …\n  },\n\n  \"undertoneAnalysis\": {  // new: separate undertone section\n    \"conclusion\": \"<cool, warm, or neutral undertone>\",\n    \"colors\": [ {\"color\": \"<undertone colour e.g. gold>\", \"note\": \"<1-sentence reaction>\"}, … ],  // typically gold/silver for temperature, black/brown for contrast\n    \"summary\": \"<1-paragraph explanation of undertone determination>\"\n  },\n\n  \"paletteNotes\":      \"<1-sentence summary of why this season suits the client>\",\n  \"makeupAdvice\":      \"<bullet-style list, max 250 chars>\",\n  \"hairAdvice\":        \"<bullet-style list, max 200 chars>\",\n  \"clothingAdvice\":    \"<bullet-style list, max 250 chars>\",\n\n  \"colorTimestamps\": { \n    \"<colour name>\": <midpoint timestamp in seconds as integer>,\n    … \n  }  // required: one entry for every unique color in wowColors, avoidColors, perColorNotes, undertoneAnalysis.colors\n}\n\nRules:\n1. **season** must be the single \"home season\" the analyst settled on (ignore candidates she rejected).\n2. Only include colours that the transcript clearly mentions.\n3. Respond with valid, minified JSON – no prose before or after.\n4. The transcript has utterances prefixed with [start-end s] Speaker: text. For colorTimestamps, for each unique color, identify the full discussion block: from the introduction utterance (e.g., \"Here comes [color].\", \"This is [color].\") to the last reaction/comparison utterance (e.g., containing keywords like 'see', 'look', 'wash', 'bright', 'shadow', 'yellowy', 'redness', 'glow', 'pretty', 'not for you'). Calculate the timestamp as Math.round(overall block midpoint) + 12 (to capture full drape and peak reaction; cap at block end or next color's start if exceeded). If no clear reaction, use introduction midpoint + 15. If multiple blocks, pick the primary one with strongest reaction. Use whole seconds.\n5. For wowColors and avoidColors, include a concise note from the analyst's reaction (e.g., \"Brightens eyes and evens skin\").\n6. Move gold, silver, black, brown (and similar undertone tests) to undertoneAnalysis; do not include in other sections.\n7. Normalize all color names to lowercase, no trailing spaces, replace multiple spaces with single (e.g., 'brick red' not 'brick red ').\n8. If a color discussion spans multiple utterances (e.g., introduction then separate reaction/comparison), treat as one block: use the overall start to end midpoint + 12.",
               "role": "system"
             },
             {
@@ -454,17 +454,16 @@
     },
     {
       "parameters": {
-        "html": "={{$json.html}}",
-        "options": {}
+        "jsCode": "// Generate PDF from HTML using a simple approach\nconst html = $json.html;\nconst clientId = $json.id || 'client-001';\nconst timestamp = new Date().toISOString().split('T')[0];\n\n// Create a downloadable HTML file that can be opened and printed as PDF\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"utf-8\">\n    <title>Color Report - ${clientId}</title>\n    <style>\n        @media print {\n            body { margin: 0; }\n            .no-print { display: none; }\n        }\n        .print-button {\n            position: fixed;\n            top: 20px;\n            right: 20px;\n            background: #007bff;\n            color: white;\n            padding: 10px 20px;\n            border: none;\n            border-radius: 5px;\n            cursor: pointer;\n            z-index: 1000;\n        }\n        .print-button:hover {\n            background: #0056b3;\n        }\n    </style>\n</head>\n<body>\n    <button class=\"print-button no-print\" onclick=\"window.print()\">🖨️ Print/Save as PDF</button>\n    ${html}\n</body>\n</html>`;\n\n// Create a data URL for the HTML file\nconst dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);\n\n// Create a downloadable filename\nconst filename = `color-report-${clientId}-${timestamp}.html`;\n\nreturn [{\n  json: {\n    html: html,\n    pdfDataUrl: dataUrl,\n    filename: filename,\n    downloadUrl: dataUrl,\n    message: `✅ Color report generated successfully!\\n\\n📄 To get PDF:\\n1. Click the download link below\\n2. Open the HTML file in your browser\\n3. Press Ctrl+P (or Cmd+P on Mac)\\n4. Choose 'Save as PDF' in the print dialog\\n\\n📁 Filename: ${filename}`\n  }\n}];"
       },
-      "type": "n8n-nodes-base.htmlToPdf",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         2500,
         -1620
       ],
       "id": "html-to-pdf-1",
-      "name": "HTML to PDF"
+      "name": "Generate PDF"
     }
   ],
   "pinData": {
@@ -687,14 +686,14 @@
       "main": [
         [
           {
-            "node": "HTML to PDF",
+            "node": "Generate PDF",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTML to PDF": {
+    "Generate PDF": {
       "main": [
         []
       ]
