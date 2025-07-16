@@ -76,7 +76,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.N8N_BASE_URL || 'http://localhost:5678' }}/api/v1/workflows",
+        "url": "={{ $credentials.n8n-api.baseUrl || 'http://localhost:5678' }}/api/v1/workflows",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -86,7 +86,7 @@
             },
             {
               "name": "X-N8N-API-KEY",
-              "value": "={{ $env.N8N_API_KEY }}"
+              "value": "={{ $credentials.n8n-api.apiKey }}"
             }
           ]
         },
@@ -337,7 +337,7 @@
           "parameters": [
             {
               "name": "authorization",
-              "value": "={{ $env.ASSEMBLYAI_API_KEY }}"
+              "value": "={{ $credentials.assemblyai.apiKey }}"
             },
             {
               "name": "content-type",
@@ -381,7 +381,7 @@
           "parameters": [
             {
               "name": "authorization",
-              "value": "={{ $env.ASSEMBLYAI_API_KEY }}"
+              "value": "={{ $credentials.assemblyai.apiKey }}"
             }
           ]
         },
@@ -399,7 +399,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.LAMBDA_FUNCTION_URL }}",
+        "url": "={{ $credentials.lambda.url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
