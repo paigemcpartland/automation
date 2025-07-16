@@ -337,7 +337,7 @@
           "parameters": [
             {
               "name": "authorization",
-              "value": "ef63b27009744d2497d6f6ef24551ed8"
+              "value": "={{ $env.ASSEMBLYAI_API_KEY }}"
             },
             {
               "name": "content-type",
@@ -381,7 +381,7 @@
           "parameters": [
             {
               "name": "authorization",
-              "value": "ef63b27009744d2497d6f6ef24551ed8"
+              "value": "={{ $env.ASSEMBLYAI_API_KEY }}"
             }
           ]
         },
@@ -399,7 +399,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://v5n3opfu34c7v2a23hpczguhma0bxmbp.lambda-url.us-east-2.on.aws/",
+        "url": "={{ $env.LAMBDA_FUNCTION_URL }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
