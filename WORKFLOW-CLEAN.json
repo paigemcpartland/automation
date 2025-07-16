@@ -405,27 +405,27 @@
             },
             {
               "name": "wowColors",
-              "value": "={{ JSON.stringify($json.message.content.wowColors || []) }}",
+              "value": "={{ $json.message.content.wowColors || [] }}",
               "type": "json"
             },
             {
               "name": "avoidColors",
-              "value": "={{ JSON.stringify($json.message.content.avoidColors || []) }}",
+              "value": "={{ $json.message.content.avoidColors || [] }}",
               "type": "json"
             },
             {
               "name": "perColorNotes",
-              "value": "={{ JSON.stringify($json.message.content.perColorNotes || {}) }}",
+              "value": "={{ $json.message.content.perColorNotes || {} }}",
               "type": "json"
             },
             {
               "name": "undertoneAnalysis",
-              "value": "={{ JSON.stringify($json.message.content.undertoneAnalysis || {}) }}",
+              "value": "={{ $json.message.content.undertoneAnalysis || {} }}",
               "type": "json"
             },
             {
               "name": "colorTimestamps",
-              "value": "={{ JSON.stringify($json.message.content.colorTimestamps || {}) }}",
+              "value": "={{ $json.message.content.colorTimestamps || {} }}",
               "type": "json"
             },
             {
