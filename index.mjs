@@ -320,7 +320,7 @@ async function analyzeFrameColor(imagePath, expectedColor) {
 }
 
 export const handler = async (event = {}) => {
-  console.log('Enhanced function started. Event received:', JSON.stringify(event));
+  console.log('Enhanced function started with auto-deployment. Event received:', JSON.stringify(event));
 
   let payload;
   try {
