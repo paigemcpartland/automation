@@ -1,0 +1,725 @@
+{
+  "name": "Auto-Updating Color Report Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        -2000
+      ],
+      "id": "2dfdcf69-8a53-4f35-a5e9-223e9b2f2b12",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -2000
+      ],
+      "id": "fetch-latest-workflow",
+      "name": "Fetch Latest Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-status",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        -2000
+      ],
+      "id": "check-fetch-success",
+      "name": "Check Fetch Success"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://thecolorgirl.app.n8n.cloud/api/v1/workflows",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYjZkYTBlZC0zMjFiLTRhM2ItYTU4NS1iYzYyODU1NTllMWEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzUyNjM0NjcxfQ.4aNpVGSzvxuS2Z3WK6ANQqXINiTcWBFIWgAkSqawzF8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        -2100
+      ],
+      "id": "import-workflow",
+      "name": "Import Workflow via API"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-import-status",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 201,
+              "operator": {
+                "type": "number",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        -2100
+      ],
+      "id": "check-import-success",
+      "name": "Check Import Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Workflow updated successfully - continue with color report\nconst importedWorkflow = $json;\nconst updateTime = new Date().toISOString();\n\nconsole.log(`✅ Workflow updated successfully!`);\nconsole.log(`📅 Update time: ${updateTime}`);\nconsole.log(`🆔 Workflow ID: ${importedWorkflow.id}`);\n\nreturn [{\n  json: {\n    workflowUpdated: true,\n    updateMessage: `✅ Workflow auto-updated successfully!\\n📅 Updated at: ${updateTime}\\n🆔 Workflow ID: ${importedWorkflow.id}\\n\\n🎯 Proceeding with color report generation...`,\n    updateTimestamp: updateTime,\n    workflowId: importedWorkflow.id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -2200
+      ],
+      "id": "workflow-updated",
+      "name": "Workflow Updated"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Import failed - continue with current workflow\nconst errorResponse = $json;\nconst errorTime = new Date().toISOString();\n\nconsole.warn(`⚠️ Workflow update failed, continuing with current version`);\nconsole.warn(`📅 Error time: ${errorTime}`);\nconsole.warn(`❌ Error: ${errorResponse.statusCode} - ${errorResponse.message || 'Unknown error'}`);\n\nreturn [{\n  json: {\n    workflowUpdated: false,\n    updateMessage: `⚠️ Workflow update failed, using current version\\n📅 Error time: ${errorTime}\\n❌ Error: ${errorResponse.statusCode} - ${errorResponse.message || 'Unknown error'}\\n\\n🎯 Proceeding with color report generation...`,\n    errorTimestamp: errorTime,\n    error: errorResponse\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -2000
+      ],
+      "id": "import-failed-continue",
+      "name": "Import Failed - Continue"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch failed - continue with current workflow\nconst errorTime = new Date().toISOString();\n\nconsole.warn(`⚠️ Failed to fetch latest workflow, continuing with current version`);\nconsole.warn(`📅 Error time: ${errorTime}`);\n\nreturn [{\n  json: {\n    workflowUpdated: false,\n    updateMessage: `⚠️ Failed to fetch latest workflow, using current version\\n📅 Error time: ${errorTime}\\n\\n🎯 Proceeding with color report generation...`,\n    errorTimestamp: errorTime\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -1900
+      ],
+      "id": "fetch-failed-continue",
+      "name": "Fetch Failed - Continue"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8bb3696b-9a87-4614-9d65-696f84593f7b",
+              "name": "audioUrl",
+              "value": "https://drive.google.com/uc?export=download&id=1fmbeuN6a_Brh-S9pBEGWaK1vjQ_SZ771",
+              "type": "string"
+            },
+            {
+              "id": "0a5bda18-7b73-4e6c-8b34-46b358360fb1",
+              "name": "videoUrl",
+              "value": "https://color-reports-assets.s3.us-east-2.amazonaws.com/IMG_8540_small.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIA2NEYZJ2UHKL43RGJ%2F20250714%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20250714T151609Z&X-Amz-Expires=300&X-Amz-Security-Token=IQoJb3JpZ2luX2JjEBcaCXVzLWVhc3QtMiJIMEYCIQCdvdpLa5sCQ2T%2F36Aq3DUCS2lziqMqBbTFxxCAWAe89gIhANQ%2Fl94tAxloD07pa2Ash9wRMoGSdXYjOK7GSnZXuYxnKtYCCDAQABoMNzE1NDMyNDgwNDI0IgyD0iEEpefM0q2KZR4qswLMOFngfo49YeOgZGlgjDSv%2F9SZMtiEmAoIcMy3kg4%2F5nAxDVRKZyFPX6Gmarn4ndhIq7Li2BowfvzJWBFA%2FXMDvD5CCMbWY%2BmpiuJHaOSqn7t%2BYwD6bnVcntGLvBYBozoN4ltuMBYo8eBJCe76HK%2F%2BBb3txOd8ToS8kuZ5QWRsycgULV%2FFs%2B1x7FX%2Bswk5ALAcIOLyGHXhD6%2FrAsJ0PDr3Fyi4AtPM1wQfeA%2BNWobjQ8L8AERWwwnk5qxhE6VaAiLyCBwvW9j4qlUz2BOuDDWvxd9ScNtU%2F6YvNwCMLUEcavU1DusuCY6wRzGVbMklWMwJEov78wywP9jkZhYikg91TpZn21JKbSEJ6WduRnxWCA%2FsO3xsfngBZqIjGiCXh1Fg%2FltZn2I9xCT30zj7Lxu%2Bw01jMPel1MMGOqwCe06OKM%2FI2A2hyDJFfSZAXUd7ufsYzPLuPJV2%2FNwcJvyVSdxBQ5bcN7%2BFHkGbyVUhJOun3LS5NW%2FhIPm99fWG3c7NGvZspdR6w37gV%2B%2FaQSRlPL%2Fr3HV19SP4dCRStNhiGLpTJ7zVouKphkIJ8zSU0DIctB3HYlxO4xSZ1QrpJF0UppcYvJagy%2FGscK9CBLfEfehJEAub7Dt3gzXHe77j8riVcbM5Xcpe%2FdFF33HwAKixOaVWw3zAuQgN99F9zwkio3H6OS5Brdg0oxAOjzX3hq%2BzPDm%2B6ZKm7bEXvByziNOiiGj5%2FUMHpAUWS1oEgCiLcgvVW%2BgFYtDFv4DjjZ1Ywkohxx9XO%2Bf2vafXCwNWlFZFX4PeXXEJLGo7jmhk0LJZ94Xf7YAGBjFRNjJ&X-Amz-Signature=f3d46faabe4951dd2ad3818aeb6dd816598f35397912528515e5be91584bb492&X-Amz-SignedHeaders=host&response-content-disposition=inline",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        200,
+        -1620
+      ],
+      "id": "f1c44349-adda-4380-93ae-50623ef97a19",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.assemblyai.com/v2/transcript",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "ef63b27009744d2497d6f6ef24551ed8"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "audio_url",
+              "value": "={{$json[\"audioUrl\"]}}"
+            },
+            {
+              "name": "speaker_labels",
+              "value": "={{true}}"
+            },
+            {
+              "name": "auto_highlights",
+              "value": "={{true}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        -1625
+      ],
+      "id": "0fc4650c-478a-45d8-90c5-cf98ead58441",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        -1625
+      ],
+      "id": "36950ad9-1e2c-46d0-adfd-54b70845235f",
+      "name": "Wait"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.assemblyai.com/v2/transcript/{{$json[\"id\"]}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "ef63b27009744d2497d6f6ef24551ed8"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        -1700
+      ],
+      "id": "c349df69-bf48-43bb-8af9-ee20fcbc07de",
+      "name": "HTTP Request - Assembly"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-status",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1080,
+        -1700
+      ],
+      "id": "check-transcription-complete",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "02c2d2ae-a098-4e37-8bce-d32f5041c01f",
+              "name": "transcript",
+              "value": "={{ $json.utterances.map(u => '[' + Math.floor(u.start/1000) + '-' + Math.floor(u.end/1000) + 's] ' + u.speaker + ': ' + u.text).join('\\n\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "84933f1f-6696-4d8a-9f39-a606ea584a30",
+              "name": "id",
+              "value": "client-001",
+              "type": "string"
+            },
+            {
+              "id": "56815695-ef16-4789-a102-9367c57cecc2",
+              "name": "videoUrl",
+              "value": "={{$json[\"audio_url\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1300,
+        -1700
+      ],
+      "id": "7433512c-47f3-409c-bc5e-4c4c56866591",
+      "name": "Edit Fields1 (2)"
+    },
+    {
+      "parameters": {
+        "messages": {
+          "values": [
+            {
+              "content": "You are a professional colour-analysis assistant. Read the full consultation transcript and produce JSON only that follows exactly this schema: { \"season\": \"<client's home season>\", \"secondarySeason\": \"<secondary season or none>\", \"wowColors\": [ {\"color\": \"<best colour 1>\", \"note\": \"<1-sentence note>\"} ], \"avoidColors\": [ {\"color\": \"<worst colour 1>\", \"note\": \"<1-sentence note>\"} ], \"perColorNotes\": { \"<colour name>\": \"<1-sentence note>\" }, \"undertoneAnalysis\": { \"conclusion\": \"<cool, warm, or neutral>\", \"colors\": [ {\"color\": \"<undertone colour>\", \"note\": \"<1-sentence reaction>\"} ], \"summary\": \"<1-paragraph explanation>\" }, \"paletteNotes\": \"<1-sentence summary>\", \"makeupAdvice\": \"<bullet-style list>\", \"hairAdvice\": \"<bullet-style list>\", \"clothingAdvice\": \"<bullet-style list>\", \"colorTimestamps\": { \"<colour name>\": <timestamp> } }",
+              "role": "system"
+            },
+            {
+              "content": "={{$node[\"Edit Fields1 (2)\"].json[\"transcript\"]}}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1520,
+        -1700
+      ],
+      "id": "4dea07de-0aca-456e-af9c-f684d866d862",
+      "name": "Message a model",
+      "alwaysOutputData": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "Sqjt9VlToFFzwmXU",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "=={\n  \"id\":            \"{{ $json.id || 'client-001' }}\",\n  \"videoUrl\":      \"s3://color-reports-assets/IMG_8540_small.mp4\",\n  \"wowColors\":     {{ JSON.stringify($json.message.content.wowColors || []) }},\n  \"avoidColors\":   {{ JSON.stringify($json.message.content.avoidColors || []) }},\n  \"perColorNotes\": {{ JSON.stringify($json.message.content.perColorNotes || {}) }},\n  \"undertoneAnalysis\": {{ JSON.stringify($json.message.content.undertoneAnalysis || {}) }},\n  \"colorTimestamps\": {{ JSON.stringify($json.message.content.colorTimestamps || {}) }},\n  \"season\":        \"{{ $json.message.content.season || '' }}\",\n  \"secondarySeason\": \"{{ $json.message.content.secondarySeason || 'none' }}\",\n  \"paletteNotes\":  \"{{ $json.message.content.paletteNotes || '' }}\",\n  \"makeupAdvice\":  \"{{ $json.message.content.makeupAdvice || '' }}\",\n  \"hairAdvice\":    \"{{ $json.message.content.hairAdvice || '' }}\",\n  \"clothingAdvice\": \"{{ $json.message.content.clothingAdvice || '' }}\"\n}",
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1880,
+        -1700
+      ],
+      "id": "e6503017-c653-408a-b06d-af0e9eaa436c",
+      "name": "Edit fields (Set Node)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://v5n3opfu34c7v2a23hpczguhma0bxmbp.lambda-url.us-east-2.on.aws/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($node[\"Edit fields (Set Node)\"].json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2100,
+        -1700
+      ],
+      "id": "2176bc84-abc7-4783-8ed8-66af715ee09a",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate HTML report\nconst {\n  id = 'client-001',\n  wowColors = [],\n  avoidColors = [],\n  perColorNotes = {},\n  undertoneAnalysis = { colors: [], conclusion: '', summary: '' },\n  frames = {},\n  season = '',\n  secondarySeason = 'none',\n  paletteNotes = '',\n  makeupAdvice = '',\n  hairAdvice = '',\n  clothingAdvice = ''\n} = $json;\n\nconst noteColors = Object.keys(perColorNotes);\nconst undertoneColors = undertoneAnalysis.colors || [];\n\nfunction esc(s = '') {\n  return String(s)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#039;');\n}\n\nfunction getHex(color) {\n  return (frames[color] && frames[color].hex) || '#CCCCCC';\n}\n\nlet html = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Color Report — ${esc(id)}</title>\n  <link href=\"https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400..900;1,400..900&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap\" rel=\"stylesheet\">\n  <style>\n    body {\n      font-family: 'Lato', sans-serif;\n      margin: 0;\n      padding: 2rem;\n      background-color: #f9f9f9;\n      color: #333;\n      line-height: 1.6;\n    }\n    .container {\n      max-width: 1200px;\n      margin: 0 auto;\n    }\n    header {\n      text-align: center;\n      margin-bottom: 3rem;\n    }\n    header img {\n      max-width: 200px;\n      margin-bottom: 1rem;\n    }\n    h1, h2 {\n      font-family: 'Bodoni Moda', serif;\n      color: #222;\n    }\n    h1 {\n      font-size: 2.5rem;\n      margin: 0.5rem 0;\n    }\n    h2 {\n      font-size: 1.8rem;\n      border-bottom: 2px solid #eee;\n      padding-bottom: 0.5rem;\n      margin-bottom: 1.5rem;\n    }\n    p, ul {\n      margin: 0.5rem 0;\n    }\n    .section {\n      margin-bottom: 3rem;\n    }\n    .color-grid {\n      display: grid;\n      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n      gap: 1.5rem;\n    }\n    .color-item {\n      background-color: #fff;\n      border: 1px solid #ddd;\n      border-radius: 8px;\n      padding: 1rem;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n      text-align: center;\n    }\n    .swatch {\n      display: inline-block;\n      width: 2rem;\n      height: 2rem;\n      margin-right: 0.5rem;\n      border: 1px solid #ccc;\n      border-radius: 4px;\n      vertical-align: middle;\n    }\n    .color-name {\n      font-weight: bold;\n      font-size: 1.2rem;\n      margin: 0.5rem 0;\n      text-transform: capitalize;\n    }\n    .color-note {\n      font-style: italic;\n      color: #666;\n      margin-bottom: 1rem;\n    }\n    img.frame {\n      max-width: 100%;\n      height: auto;\n      border-radius: 4px;\n      box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    }\n    .advice-list {\n      list-style-type: disc;\n      padding-left: 1.5rem;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <header>\n      <img src=\"https://coloranalysismiami.com/assets/images/Color%20Girl%20Logo%20Black-WiyeUgjg.png\" alt=\"Paige's Logo\">\n      <h1>Color Report for ${esc(id)}</h1>\n      <p><strong>Season:</strong> ${esc(season)} (${esc(secondarySeason)})</p>\n    </header>\n\n    <section class=\"section\">\n      <h2>Undertone Analysis</h2>\n      <p>${esc(undertoneAnalysis.summary || '')}</p>\n      <p><strong>Conclusion:</strong> ${esc(undertoneAnalysis.conclusion || '')}</p>\n      <div class=\"color-grid\">\n        ${undertoneColors.map(c => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(c.color)};\"></span>\n            <div class=\"color-name\">${esc(c.color)}</div>\n            <p class=\"color-note\">${esc(c.note)}</p>\n            <img class=\"frame\" src=\"${esc((frames[c.color] && frames[c.color].url) || '')}\" alt=\"${esc(c.color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>\"Wow\" Colors</h2>\n      <div class=\"color-grid\">\n        ${wowColors.map(c => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(c.color)};\"></span>\n            <div class=\"color-name\">${esc(c.color)}</div>\n            <p class=\"color-note\">${esc(c.note)}</p>\n            <img class=\"frame\" src=\"${esc((frames[c.color] && frames[c.color].url) || '')}\" alt=\"${esc(c.color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>Colors to Avoid</h2>\n      <div class=\"color-grid\">\n        ${avoidColors.map(c => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(c.color)};\"></span>\n            <div class=\"color-name\">${esc(c.color)}</div>\n            <p class=\"color-note\">${esc(c.note)}</p>\n            <img class=\"frame\" src=\"${esc((frames[c.color] && frames[c.color].url) || '')}\" alt=\"${esc(c.color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>Per-Color Notes</h2>\n      <div class=\"color-grid\">\n        ${noteColors.map(color => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(color)};\"></span>\n            <div class=\"color-name\">${esc(color)}</div>\n            <p class=\"color-note\">${esc(perColorNotes[color])}</p>\n            <img class=\"frame\" src=\"${esc((frames[color] && frames[color].url) || '')}\" alt=\"${esc(color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>Palette Notes</h2>\n      <p>${esc(paletteNotes)}</p>\n    </section>\n\n    <section class=\"section\">\n      <h2>Makeup Advice</h2>\n      <ul class=\"advice-list\">\n        ${esc(makeupAdvice).split(/•|\\n/).filter(Boolean).map(item => `<li>${esc(item.trim())}</li>`).join('')}\n      </ul>\n    </section>\n\n    <section class=\"section\">\n      <h2>Hair Advice</h2>\n      <ul class=\"advice-list\">\n        ${esc(hairAdvice).split(/•|\\n/).filter(Boolean).map(item => `<li>${esc(item.trim())}</li>`).join('')}\n      </ul>\n    </section>\n\n    <section class=\"section\">\n      <h2>Clothing Advice</h2>\n      <ul class=\"advice-list\">\n        ${esc(clothingAdvice).split(/•|\\n/).filter(Boolean).map(item => `<li>${esc(item.trim())}</li>`).join('')}\n      </ul>\n    </section>\n\n  </div>\n</body>\n</html>`;\n\nreturn [{ json: { html } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        -1700
+      ],
+      "id": "b2f6934b-6740-45ff-b03f-a5b02e007349",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate PDF from HTML\nconst html = $json.html;\nconst clientId = $json.id || 'client-001';\nconst timestamp = new Date().toISOString().split('T')[0];\n\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"utf-8\">\n    <title>Color Report - ${clientId}</title>\n    <style>\n        @media print {\n            body { margin: 0; }\n            .no-print { display: none; }\n        }\n        .print-button {\n            position: fixed;\n            top: 20px;\n            right: 20px;\n            background: #007bff;\n            color: white;\n            padding: 10px 20px;\n            border: none;\n            border-radius: 5px;\n            cursor: pointer;\n            z-index: 1000;\n        }\n        .print-button:hover {\n            background: #0056b3;\n        }\n    </style>\n</head>\n<body>\n    <button class=\"print-button no-print\" onclick=\"window.print()\">🖨️ Print/Save as PDF</button>\n    ${html}\n</body>\n</html>`;\n\nconst dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);\nconst filename = `color-report-${clientId}-${timestamp}.html`;\n\nreturn [{\n  json: {\n    html: html,\n    pdfDataUrl: dataUrl,\n    filename: filename,\n    downloadUrl: dataUrl,\n    message: `✅ Color report generated successfully!\\n\\n📄 To get PDF:\\n1. Copy the data URL below\\n2. Paste it in your browser address bar\\n3. Press Enter to open the file\\n4. Press Ctrl+P (or Cmd+P on Mac)\\n5. Choose 'Save as PDF' in the print dialog\\n\\n📁 Filename: ${filename}\\n🔗 Data URL: ${dataUrl}`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        -1700
+      ],
+      "id": "html-to-pdf-1",
+      "name": "Generate PDF"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2720,
+        -1700
+      ],
+      "id": "respond-with-download",
+      "name": "Respond with Download Info"
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Fetch Latest Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Latest Workflow": {
+      "main": [
+        [
+          {
+            "node": "Check Fetch Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Fetch Success": {
+      "main": [
+        [
+          {
+            "node": "Import Workflow via API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Failed - Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Workflow via API": {
+      "main": [
+        [
+          {
+            "node": "Check Import Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Import Success": {
+      "main": [
+        [
+          {
+            "node": "Workflow Updated",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Import Failed - Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Updated": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Failed - Continue": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Failed - Continue": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Assembly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Assembly": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1 (2)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1 (2)": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Edit fields (Set Node)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit fields (Set Node)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Generate PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate PDF": {
+      "main": [
+        [
+          {
+            "node": "Respond with Download Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond with Download Info": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "auto-updating-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d1a508d96e0373431a8ffd86a932b1a2dfb7d4c670838b2ba0c3e7f887cceca4"
+  },
+  "id": "cniuV4AtCdfBgTQE",
+  "tags": []
+} 
