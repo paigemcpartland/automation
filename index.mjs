@@ -443,7 +443,7 @@ export const handler = async (event = {}) => {
         for (const offset of offsets) {
           let ts = baseTs + offset;
           ts = Math.max(0, Math.min(duration - 1, ts));
-          const tempPath = `/tmp/${id}_${color.replace(/\s/g, '_')}_${offset}.jpg`;
+          const tempPath = `/tmp/${id}_${color.replace(/[\s\/]/g, '_')}_${offset}.jpg`;
           
           try {
             execSync(
