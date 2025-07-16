@@ -391,8 +391,75 @@
     },
     {
       "parameters": {
-        "mode": "raw",
-        "jsonOutput": "=={\n  \"id\":            \"{{ $json.id || 'client-001' }}\",\n  \"videoUrl\":      \"s3://color-reports-assets/IMG_8540_small.mp4\",\n  \"wowColors\":     {{ JSON.stringify($json.message.content.wowColors || []) }},\n  \"avoidColors\":   {{ JSON.stringify($json.message.content.avoidColors || []) }},\n  \"perColorNotes\": {{ JSON.stringify($json.message.content.perColorNotes || {}) }},\n  \"undertoneAnalysis\": {{ JSON.stringify($json.message.content.undertoneAnalysis || {}) }},\n  \"colorTimestamps\": {{ JSON.stringify($json.message.content.colorTimestamps || {}) }},\n  \"season\":        \"{{ $json.message.content.season || '' }}\",\n  \"secondarySeason\": \"{{ $json.message.content.secondarySeason || 'none' }}\",\n  \"paletteNotes\":  \"{{ $json.message.content.paletteNotes || '' }}\",\n  \"makeupAdvice\":  \"{{ $json.message.content.makeupAdvice || '' }}\",\n  \"hairAdvice\":    \"{{ $json.message.content.hairAdvice || '' }}\",\n  \"clothingAdvice\": \"{{ $json.message.content.clothingAdvice || '' }}\"\n}",
+        "assignments": {
+          "assignments": [
+            {
+              "name": "id",
+              "value": "={{ $json.id || 'client-001' }}",
+              "type": "string"
+            },
+            {
+              "name": "videoUrl",
+              "value": "s3://color-reports-assets/IMG_8540_small.mp4",
+              "type": "string"
+            },
+            {
+              "name": "wowColors",
+              "value": "={{ JSON.stringify($json.message.content.wowColors || []) }}",
+              "type": "json"
+            },
+            {
+              "name": "avoidColors",
+              "value": "={{ JSON.stringify($json.message.content.avoidColors || []) }}",
+              "type": "json"
+            },
+            {
+              "name": "perColorNotes",
+              "value": "={{ JSON.stringify($json.message.content.perColorNotes || {}) }}",
+              "type": "json"
+            },
+            {
+              "name": "undertoneAnalysis",
+              "value": "={{ JSON.stringify($json.message.content.undertoneAnalysis || {}) }}",
+              "type": "json"
+            },
+            {
+              "name": "colorTimestamps",
+              "value": "={{ JSON.stringify($json.message.content.colorTimestamps || {}) }}",
+              "type": "json"
+            },
+            {
+              "name": "season",
+              "value": "={{ $json.message.content.season || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "secondarySeason",
+              "value": "={{ $json.message.content.secondarySeason || 'none' }}",
+              "type": "string"
+            },
+            {
+              "name": "paletteNotes",
+              "value": "={{ $json.message.content.paletteNotes || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "makeupAdvice",
+              "value": "={{ $json.message.content.makeupAdvice || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "hairAdvice",
+              "value": "={{ $json.message.content.hairAdvice || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "clothingAdvice",
+              "value": "={{ $json.message.content.clothingAdvice || '' }}",
+              "type": "string"
+            }
+          ]
+        },
         "includeOtherFields": true,
         "options": {}
       },
