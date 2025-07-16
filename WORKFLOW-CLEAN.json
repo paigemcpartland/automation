@@ -14,7 +14,7 @@
     },
     {
       "parameters": {
-        "url": "https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json",
+        "url": "https://raw.githubusercontent.com/paigemcpartland/automation/main/WORKFLOW-CLEAN.json",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
