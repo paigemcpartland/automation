@@ -451,6 +451,20 @@
       ],
       "id": "b2f6934b-6740-45ff-b03f-a5b02e007349",
       "name": "Code"
+    },
+    {
+      "parameters": {
+        "html": "={{$json.html}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.htmlToPdf",
+      "typeVersion": 1,
+      "position": [
+        2500,
+        -1620
+      ],
+      "id": "html-to-pdf-1",
+      "name": "HTML to PDF"
     }
   ],
   "pinData": {
@@ -670,6 +684,17 @@
       ]
     },
     "Code": {
+      "main": [
+        [
+          {
+            "node": "HTML to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML to PDF": {
       "main": [
         []
       ]
