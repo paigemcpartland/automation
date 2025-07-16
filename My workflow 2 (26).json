@@ -1,5 +1,5 @@
 {
-  "name": "My workflow 2",
+  "name": "Auto-Updating Color Report Workflow",
   "nodes": [
     {
       "parameters": {},
@@ -7,10 +7,175 @@
       "typeVersion": 1,
       "position": [
         -20,
-        -1625
+        -2000
       ],
       "id": "2dfdcf69-8a53-4f35-a5e9-223e9b2f2b12",
       "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -2000
+      ],
+      "id": "fetch-latest-workflow",
+      "name": "Fetch Latest Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-status",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        -2000
+      ],
+      "id": "check-fetch-success",
+      "name": "Check Fetch Success"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL || 'http://localhost:5678' }}/api/v1/workflows",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "={{ $env.N8N_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        -2100
+      ],
+      "id": "import-workflow",
+      "name": "Import Workflow via API"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-import-status",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 201,
+              "operator": {
+                "type": "number",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        -2100
+      ],
+      "id": "check-import-success",
+      "name": "Check Import Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Workflow updated successfully - continue with color report\nconst importedWorkflow = $json;\nconst updateTime = new Date().toISOString();\n\nconsole.log(`✅ Workflow updated successfully!`);\nconsole.log(`📅 Update time: ${updateTime}`);\nconsole.log(`🆔 Workflow ID: ${importedWorkflow.id}`);\n\nreturn [{\n  json: {\n    workflowUpdated: true,\n    updateMessage: `✅ Workflow auto-updated successfully!\\n📅 Updated at: ${updateTime}\\n🆔 Workflow ID: ${importedWorkflow.id}\\n\\n🎯 Proceeding with color report generation...`,\n    updateTimestamp: updateTime,\n    workflowId: importedWorkflow.id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -2200
+      ],
+      "id": "workflow-updated",
+      "name": "Workflow Updated"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Import failed - continue with current workflow\nconst errorResponse = $json;\nconst errorTime = new Date().toISOString();\n\nconsole.warn(`⚠️ Workflow update failed, continuing with current version`);\nconsole.warn(`📅 Error time: ${errorTime}`);\nconsole.warn(`❌ Error: ${errorResponse.statusCode} - ${errorResponse.message || 'Unknown error'}`);\n\nreturn [{\n  json: {\n    workflowUpdated: false,\n    updateMessage: `⚠️ Workflow update failed, using current version\\n📅 Error time: ${errorTime}\\n❌ Error: ${errorResponse.statusCode} - ${errorResponse.message || 'Unknown error'}\\n\\n🎯 Proceeding with color report generation...`,\n    errorTimestamp: errorTime,\n    error: errorResponse\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -2000
+      ],
+      "id": "import-failed-continue",
+      "name": "Import Failed - Continue"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch failed - continue with current workflow\nconst errorTime = new Date().toISOString();\n\nconsole.warn(`⚠️ Failed to fetch latest workflow, continuing with current version`);\nconsole.warn(`📅 Error time: ${errorTime}`);\n\nreturn [{\n  json: {\n    workflowUpdated: false,\n    updateMessage: `⚠️ Failed to fetch latest workflow, using current version\\n📅 Error time: ${errorTime}\\n\\n🎯 Proceeding with color report generation...`,\n    errorTimestamp: errorTime\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -1900
+      ],
+      "id": "fetch-failed-continue",
+      "name": "Fetch Failed - Continue"
     },
     {
       "parameters": {
@@ -274,7 +439,6 @@
       "id": "e6503017-c653-408a-b06d-af0e9eaa436c",
       "name": "Edit fields (Set Node)"
     },
-
     {
       "parameters": {
         "jsCode": "// 1) Pull in data from Lambda response (includes GPT fields + frames)\nconst {\n  id = 'client-001',\n  wowColors = [],\n  avoidColors = [],\n  perColorNotes = {},\n  undertoneAnalysis = { colors: [], conclusion: '', summary: '' },\n  frames = {},\n  // These come from GPT via Lambda pass-through\n  season = '',\n  secondarySeason = 'none',\n  paletteNotes = '',\n  makeupAdvice = '',\n  hairAdvice = '',\n  clothingAdvice = ''\n} = $json;  // Directly from Lambda output\n\n// 2) Get note colors (object keys may not preserve order, but OK for display)\nconst noteColors = Object.keys(perColorNotes);\nconst undertoneColors = undertoneAnalysis.colors || [];\n\n// 3) Proper HTML escaping\nfunction esc(s = '') {\n  return String(s)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#039;');\n}\n\n// 4) Get hex: Use dynamic from frame or fallback to neutral gray\nfunction getHex(color) {\n  return (frames[color] && frames[color].hex) || '#CCCCCC';  // Neutral fallback if no hex extracted\n}\n\n// 5) Build cleaned HTML with better layout and all sections\nlet html = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Color Report — ${esc(id)}</title>\n  <link href=\"https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400..900;1,400..900&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap\" rel=\"stylesheet\">\n  <style>\n    body {\n      font-family: 'Lato', sans-serif;\n      margin: 0;\n      padding: 2rem;\n      background-color: #f9f9f9;\n      color: #333;\n      line-height: 1.6;\n    }\n    .container {\n      max-width: 1200px;\n      margin: 0 auto;\n    }\n    header {\n      text-align: center;\n      margin-bottom: 3rem;\n    }\n    header img {\n      max-width: 200px;\n      margin-bottom: 1rem;\n    }\n    h1, h2 {\n      font-family: 'Bodoni Moda', serif;\n      color: #222;\n    }\n    h1 {\n      font-size: 2.5rem;\n      margin: 0.5rem 0;\n    }\n    h2 {\n      font-size: 1.8rem;\n      border-bottom: 2px solid #eee;\n      padding-bottom: 0.5rem;\n      margin-bottom: 1.5rem;\n    }\n    p, ul {\n      margin: 0.5rem 0;\n    }\n    .section {\n      margin-bottom: 3rem;\n    }\n    .color-grid {\n      display: grid;\n      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n      gap: 1.5rem;\n    }\n    .color-item {\n      background-color: #fff;\n      border: 1px solid #ddd;\n      border-radius: 8px;\n      padding: 1rem;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n      text-align: center;\n    }\n    .swatch {\n      display: inline-block;\n      width: 2rem;\n      height: 2rem;\n      margin-right: 0.5rem;\n      border: 1px solid #ccc;\n      border-radius: 4px;\n      vertical-align: middle;\n    }\n    .color-name {\n      font-weight: bold;\n      font-size: 1.2rem;\n      margin: 0.5rem 0;\n      text-transform: capitalize;\n    }\n    .color-note {\n      font-style: italic;\n      color: #666;\n      margin-bottom: 1rem;\n    }\n    img.frame {\n      max-width: 100%;\n      height: auto;\n      border-radius: 4px;\n      box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    }\n    .advice-list {\n      list-style-type: disc;\n      padding-left: 1.5rem;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <header>\n      <img src=\"https://coloranalysismiami.com/assets/images/Color%20Girl%20Logo%20Black-WiyeUgjg.png\" alt=\"Paige's Logo\">\n      <h1>Color Report for ${esc(id)}</h1>\n      <p><strong>Season:</strong> ${esc(season)} (${esc(secondarySeason)})</p>\n    </header>\n\n    <section class=\"section\">\n      <h2>Undertone Analysis</h2>\n      <p>${esc(undertoneAnalysis.summary || '')}</p>\n      <p><strong>Conclusion:</strong> ${esc(undertoneAnalysis.conclusion || '')}</p>\n      <div class=\"color-grid\">\n        ${undertoneColors.map(c => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(c.color)};\"></span>\n            <div class=\"color-name\">${esc(c.color)}</div>\n            <p class=\"color-note\">${esc(c.note)}</p>\n            <img class=\"frame\" src=\"${esc((frames[c.color] && frames[c.color].url) || '')}\" alt=\"${esc(c.color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>\"Wow\" Colors</h2>\n      <div class=\"color-grid\">\n        ${wowColors.map(c => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(c.color)};\"></span>\n            <div class=\"color-name\">${esc(c.color)}</div>\n            <p class=\"color-note\">${esc(c.note)}</p>\n            <img class=\"frame\" src=\"${esc((frames[c.color] && frames[c.color].url) || '')}\" alt=\"${esc(c.color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>Colors to Avoid</h2>\n      <div class=\"color-grid\">\n        ${avoidColors.map(c => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(c.color)};\"></span>\n            <div class=\"color-name\">${esc(c.color)}</div>\n            <p class=\"color-note\">${esc(c.note)}</p>\n            <img class=\"frame\" src=\"${esc((frames[c.color] && frames[c.color].url) || '')}\" alt=\"${esc(c.color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>Per-Color Notes</h2>\n      <div class=\"color-grid\">\n        ${noteColors.map(color => `\n          <div class=\"color-item\">\n            <span class=\"swatch\" style=\"background: ${getHex(color)};\"></span>\n            <div class=\"color-name\">${esc(color)}</div>\n            <p class=\"color-note\">${esc(perColorNotes[color])}</p>\n            <img class=\"frame\" src=\"${esc((frames[color] && frames[color].url) || '')}\" alt=\"${esc(color)}\">\n          </div>\n        `).join('')}\n      </div>\n    </section>\n\n    <section class=\"section\">\n      <h2>Palette Notes</h2>\n      <p>${esc(paletteNotes)}</p>\n    </section>\n\n    <section class=\"section\">\n      <h2>Makeup Advice</h2>\n      <ul class=\"advice-list\">\n        ${esc(makeupAdvice).split(/•|\\n/).filter(Boolean).map(item => `<li>${esc(item.trim())}</li>`).join('')}\n      </ul>\n    </section>\n\n    <section class=\"section\">\n      <h2>Hair Advice</h2>\n      <ul class=\"advice-list\">\n        ${esc(hairAdvice).split(/•|\\n/).filter(Boolean).map(item => `<li>${esc(item.trim())}</li>`).join('')}\n      </ul>\n    </section>\n\n    <section class=\"section\">\n      <h2>Clothing Advice</h2>\n      <ul class=\"advice-list\">\n        ${esc(clothingAdvice).split(/•|\\n/).filter(Boolean).map(item => `<li>${esc(item.trim())}</li>`).join('')}\n      </ul>\n    </section>\n\n  </div>\n</body>\n</html>`;\n\n// 6) Return to PDF step (e.g., connect to HTML-to-PDF node in n8n)\nreturn [{ json: { html } }];"
@@ -298,6 +462,97 @@
   },
   "connections": {
     "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Fetch Latest Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Latest Workflow": {
+      "main": [
+        [
+          {
+            "node": "Check Fetch Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Fetch Success": {
+      "main": [
+        [
+          {
+            "node": "Import Workflow via API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Failed - Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Workflow via API": {
+      "main": [
+        [
+          {
+            "node": "Check Import Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Import Success": {
+      "main": [
+        [
+          {
+            "node": "Workflow Updated",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Import Failed - Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Updated": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Failed - Continue": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Failed - Continue": {
       "main": [
         [
           {
@@ -414,7 +669,6 @@
         ]
       ]
     },
-
     "Code": {
       "main": [
         []
@@ -425,7 +679,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "fa5c2708-1e2c-4bd5-b0ac-6b511bcdf5df",
+  "versionId": "auto-updating-v1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d1a508d96e0373431a8ffd86a932b1a2dfb7d4c670838b2ba0c3e7f887cceca4"
