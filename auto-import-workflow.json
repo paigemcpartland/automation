@@ -1,0 +1,364 @@
+{
+  "name": "Auto-Import Color Report Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "id": "fetch-latest-workflow",
+      "name": "Fetch Latest Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-status",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        680,
+        300
+      ],
+      "id": "check-response",
+      "name": "Check Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "workflow-data",
+              "name": "workflowData",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "import-timestamp",
+              "name": "importTimestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            },
+            {
+              "id": "workflow-version",
+              "name": "workflowVersion",
+              "value": "={{ $json.versionId || 'latest' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        900,
+        200
+      ],
+      "id": "prepare-workflow",
+      "name": "Prepare Workflow Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_BASE_URL || 'http://localhost:5678' }}/api/v1/workflows",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "={{ $env.N8N_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.workflowData }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        200
+      ],
+      "id": "import-workflow",
+      "name": "Import Workflow via API"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-import-status",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 201,
+              "operator": {
+                "type": "number",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1340,
+        200
+      ],
+      "id": "check-import-success",
+      "name": "Check Import Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Successfully imported workflow\nconst importTime = $('Prepare Workflow Data').item.json.importTimestamp;\nconst version = $('Prepare Workflow Data').item.json.workflowVersion;\nconst importedWorkflow = $json;\n\nconsole.log(`✅ Workflow imported successfully!`);\nconsole.log(`📅 Import time: ${importTime}`);\nconsole.log(`🆔 Workflow ID: ${importedWorkflow.id}`);\nconsole.log(`📊 Version: ${version}`);\n\nreturn [{\n  json: {\n    success: true,\n    message: `✅ Workflow auto-imported successfully!\\n\\n📅 Imported at: ${importTime}\\n🆔 Workflow ID: ${importedWorkflow.id}\\n📊 Version: ${version}\\n\\n🎯 Your color report workflow is now up to date!\\n\\n💡 Next steps:\\n1. Go to Workflows in n8n\\n2. Find the updated workflow\\n3. Run your color report process\\n\\n🔗 Workflow URL: ${$env.N8N_BASE_URL || 'http://localhost:5678'}/workflow/${importedWorkflow.id}`,\n    importTimestamp: importTime,\n    workflowVersion: version,\n    workflowId: importedWorkflow.id,\n    workflowName: importedWorkflow.name || 'Color Report Workflow'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        100
+      ],
+      "id": "success-message",
+      "name": "Success Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Import failed\nconst importTime = $('Prepare Workflow Data').item.json.importTimestamp;\nconst version = $('Prepare Workflow Data').item.json.workflowVersion;\nconst errorResponse = $json;\n\nconsole.error(`❌ Workflow import failed:`, errorResponse);\n\nreturn [{\n  json: {\n    success: false,\n    message: `❌ Workflow auto-import failed!\\n\\n📅 Import time: ${importTime}\\n📊 Version: ${version}\\n❌ Error: ${errorResponse.statusCode} - ${errorResponse.message || 'Unknown error'}\\n\\n💡 Troubleshooting:\\n1. Check n8n API key and base URL\\n2. Verify n8n is running and accessible\\n3. Check workflow data format\\n4. Try manual import instead\\n\\n🔗 Manual import URL:\\nhttps://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json`,\n    importTimestamp: importTime,\n    workflowVersion: version,\n    error: errorResponse\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ],
+      "id": "import-error",
+      "name": "Import Error Message"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error-message",
+              "name": "error",
+              "value": "❌ Failed to fetch latest workflow from GitHub",
+              "type": "string"
+            },
+            {
+              "id": "error-details",
+              "name": "details",
+              "value": "={{ 'Status: ' + $json.statusCode + ', Response: ' + JSON.stringify($json).substring(0, 200) }}",
+              "type": "string"
+            },
+            {
+              "id": "error-timestamp",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        900,
+        400
+      ],
+      "id": "prepare-error",
+      "name": "Prepare Error Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle fetch failure\nconst error = $json.error;\nconst details = $json.details;\nconst timestamp = $json.timestamp;\n\nconsole.error(`❌ Failed to fetch workflow: ${error}`);\nconsole.error(`📅 Error time: ${timestamp}`);\nconsole.error(`🔍 Details: ${details}`);\n\nreturn [{\n  json: {\n    success: false,\n    message: `❌ Failed to fetch latest workflow!\\n\\n📅 Error time: ${timestamp}\\n❌ Error: ${error}\\n🔍 Details: ${details}\\n\\n💡 Troubleshooting:\\n1. Check your internet connection\\n2. Verify the GitHub repository is accessible\\n3. Ensure the workflow file exists in the repo\\n4. Try running this workflow again\\n\\n🔗 Manual import URL:\\nhttps://raw.githubusercontent.com/paigemcpartland/automation/main/My%20workflow%202%20(26).json`,\n    error: error,\n    details: details,\n    timestamp: timestamp\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ],
+      "id": "handle-error",
+      "name": "Handle Fetch Error"
+    }
+  ],
+  "pinData": {
+    "Manual Trigger": [
+      {
+        "json": {}
+      }
+    ]
+  },
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Latest Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Latest Workflow": {
+      "main": [
+        [
+          {
+            "node": "Check Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Response": {
+      "main": [
+        [
+          {
+            "node": "Prepare Workflow Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Error Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Workflow Data": {
+      "main": [
+        [
+          {
+            "node": "Import Workflow via API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Import Workflow via API": {
+      "main": [
+        [
+          {
+            "node": "Check Import Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Import Success": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Import Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Error Data": {
+      "main": [
+        [
+          {
+            "node": "Handle Fetch Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "auto-import-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "auto-import-workflow"
+  },
+  "id": "auto-import-workflow",
+  "tags": []
+} 
