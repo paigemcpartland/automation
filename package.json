@@ -1,0 +1,38 @@
+{
+  "name": "color-report-automation",
+  "version": "1.0.0",
+  "description": "Enhanced color consultation report automation with advanced frame extraction",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "node test-color-analysis.js",
+    "test:image": "node test-color-analysis.js path/to/image.jpg",
+    "deploy": "./deploy.sh",
+    "start": "node index.mjs"
+  },
+  "keywords": [
+    "color-analysis",
+    "lambda",
+    "sharp",
+    "ffmpeg",
+    "openai",
+    "n8n",
+    "automation"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "sharp": "^0.32.0"
+  },
+  "devDependencies": {
+    "jq": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "your-repo-url"
+  }
+} 
