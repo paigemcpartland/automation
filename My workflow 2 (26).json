@@ -76,7 +76,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/api/v1/workflows",
+        "url": "https://thecolorgirl.app.n8n.cloud/api/v1/workflows",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -86,7 +86,7 @@
             },
             {
               "name": "X-N8N-API-KEY",
-              "value": "your-n8n-api-key-here"
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYjZkYTBlZC0zMjFiLTRhM2ItYTU4NS1iYzYyODU1NTllMWEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzUyNjM0NjcxfQ.4aNpVGSzvxuS2Z3WK6ANQqXINiTcWBFIWgAkSqawzF8"
             }
           ]
         },
