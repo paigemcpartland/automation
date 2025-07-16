@@ -511,6 +511,19 @@
       ],
       "id": "b2f6934b-6740-45ff-b03f-a5b02e007349",
       "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Output only the clean HTML/CSS for copy-paste, with all advice sections\nconst html = $node[\"Code\"].json[\"completeHtml\"];\nreturn [{ json: { html } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2540,
+        -1700
+      ],
+      "id": "output-clean-html",
+      "name": "Output Clean HTML"
     }
 
   ],
@@ -724,6 +737,17 @@
       ]
     },
     "Code": {
+      "main": [
+        [
+          {
+            "node": "output-clean-html",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output-clean-html": {
       "main": [
         []
       ]
