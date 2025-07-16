@@ -37,13 +37,13 @@ jobs:
         
         # Update Lambda function code
         aws lambda update-function-code \
-          --function-name color-report-lambda \
+          --function-name v5n3opfu34c7v2a23hpczguhma0bxmbp \
           --zip-file fileb://lambda-deployment.zip \
           --region us-east-2
           
         # Update Lambda function configuration (if needed)
         aws lambda update-function-configuration \
-          --function-name color-report-lambda \
+          --function-name v5n3opfu34c7v2a23hpczguhma0bxmbp \
           --environment Variables='{"BUCKET":"color-reports-assets","OPENAI_API_KEY":"${{ secrets.OPENAI_API_KEY }}"}'
           
         echo "Lambda deployment completed!" 
