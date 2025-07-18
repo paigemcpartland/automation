@@ -1,0 +1,369 @@
+{
+  "name": "Client Color Analysis Report",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "color-analysis",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "color-analysis-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract video URL and session ID from the webhook payload\nconst { videoUrl, sessionId } = $input.first().json;\n\nif (!videoUrl) {\n  throw new Error('Video URL is required');\n}\n\nreturn {\n  videoUrl,\n  sessionId: sessionId || `session_${Date.now()}`,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "extract-video-data",
+      "name": "Extract Video Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.assemblyai.com/v2/transcript",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "audio_url",
+              "value": "={{ $json.videoUrl }}"
+            },
+            {
+              "name": "speaker_labels",
+              "value": "true"
+            },
+            {
+              "name": "auto_highlights",
+              "value": "true"
+            },
+            {
+              "name": "entity_detection",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "start-transcription",
+      "name": "Start Transcription",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "assemblyai-api-key",
+          "name": "AssemblyAI API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.assemblyai.com/v2/transcript/={{ $json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-transcription-status",
+      "name": "Check Transcription Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "assemblyai-api-key",
+          "name": "AssemblyAI API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "status-completed",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "transcription-complete",
+      "name": "Transcription Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "wait-for-transcription",
+      "name": "Wait 5 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare the payload for the Lambda function with just the transcription\nconst transcription = $input.first().json;\nconst videoData = $('Extract Video Data').first().json;\n\n// Prepare the payload for the Lambda function\nconst payload = {\n  id: videoData.sessionId,\n  videoUrl: videoData.videoUrl,\n  transcription: transcription\n};\n\nreturn payload;"
+      },
+      "id": "prepare-lambda-payload",
+      "name": "Prepare Lambda Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.LAMBDA_FUNCTION_URL }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "videoUrl",
+              "value": "={{ $json.videoUrl }}"
+            },
+            {
+              "name": "transcription",
+              "value": "={{ $json.transcription }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "call-lambda",
+      "name": "Call Lambda Function",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "lambda-auth",
+          "name": "Lambda Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate the client-facing HTML report\nconst lambdaResponse = $input.first().json;\nconst videoData = $('Extract Video Data').first().json;\n\n// Generate the HTML report\nconst generateHTML = (data) => {\n  const { \n    finalSeason, \n    undertoneAnalysis, \n    seasonalAnalysis, \n    individualColors, \n    frames, \n    videoDuration, \n    transcription \n  } = data;\n  \n  let html = `\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Your Color Analysis Report</title>\n    <style>\n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            line-height: 1.6;\n            color: #333;\n            max-width: 1200px;\n            margin: 0 auto;\n            padding: 20px;\n            background-color: #f9f9f9;\n        }\n        .header {\n            text-align: center;\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            color: white;\n            padding: 40px 20px;\n            border-radius: 10px;\n            margin-bottom: 30px;\n        }\n        .header h1 {\n            margin: 0;\n            font-size: 2.5em;\n            font-weight: 300;\n        }\n        .header p {\n            margin: 10px 0 0 0;\n            opacity: 0.9;\n            font-size: 1.1em;\n        }\n        .welcome {\n            background: white;\n            padding: 30px;\n            border-radius: 10px;\n            margin-bottom: 30px;\n            box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n            font-size: 1.1em;\n            line-height: 1.8;\n        }\n        .season-result {\n            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);\n            color: white;\n            padding: 40px;\n            border-radius: 15px;\n            margin: 30px 0;\n            text-align: center;\n            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);\n        }\n        .season-result h2 {\n            font-size: 3em;\n            margin: 0 0 10px 0;\n            font-weight: 300;\n        }\n        .season-result p {\n            font-size: 1.3em;\n            margin: 0;\n            opacity: 0.9;\n        }\n        .section {\n            background: white;\n            margin: 20px 0;\n            padding: 30px;\n            border-radius: 10px;\n            box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n        }\n        .section h2 {\n            color: #667eea;\n            border-bottom: 2px solid #667eea;\n            padding-bottom: 10px;\n            margin-bottom: 20px;\n            font-size: 1.8em;\n        }\n        .analysis-grid {\n            display: grid;\n            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));\n            gap: 20px;\n            margin-top: 20px;\n        }\n        .analysis-card {\n            border: 1px solid #e0e0e0;\n            border-radius: 8px;\n            padding: 20px;\n            background: white;\n            transition: transform 0.2s;\n        }\n        .analysis-card:hover {\n            transform: translateY(-2px);\n            box-shadow: 0 4px 15px rgba(0,0,0,0.1);\n        }\n        .analysis-image {\n            width: 100%;\n            height: 200px;\n            object-fit: cover;\n            border-radius: 8px;\n            margin-bottom: 15px;\n        }\n        .analysis-title {\n            font-size: 1.3em;\n            font-weight: bold;\n            color: #333;\n            margin-bottom: 10px;\n        }\n        .analysis-notes {\n            color: #666;\n            line-height: 1.5;\n        }\n        .undertone-section {\n            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);\n            color: white;\n            padding: 25px;\n            border-radius: 10px;\n            margin: 20px 0;\n        }\n        .undertone-section h3 {\n            margin-top: 0;\n            color: white;\n        }\n        .palette-section {\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            color: white;\n            padding: 25px;\n            border-radius: 10px;\n            margin: 20px 0;\n        }\n        .palette-section h3 {\n            margin-top: 0;\n            color: white;\n        }\n        .color-grid {\n            display: grid;\n            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n            gap: 15px;\n            margin-top: 20px;\n        }\n        .color-card {\n            background: white;\n            border-radius: 8px;\n            padding: 15px;\n            text-align: center;\n        }\n        .color-image {\n            width: 100%;\n            height: 150px;\n            object-fit: cover;\n            border-radius: 8px;\n            margin-bottom: 10px;\n        }\n        .color-name {\n            font-weight: bold;\n            color: #333;\n            margin-bottom: 5px;\n        }\n        .timestamp {\n            font-size: 0.9em;\n            color: #999;\n        }\n        .notes-section {\n            background: #f8f9fa;\n            padding: 20px;\n            border-radius: 8px;\n            margin-top: 20px;\n        }\n        .notes-section h4 {\n            color: #667eea;\n            margin-bottom: 15px;\n        }\n        .notes-text {\n            white-space: pre-wrap;\n            font-family: 'Segoe UI', sans-serif;\n            background: white;\n            padding: 15px;\n            border-radius: 5px;\n            border-left: 4px solid #667eea;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"header\">\n        <h1>Your Color Analysis Report</h1>\n        <p>Professional Color Consultation Results</p>\n    </div>\n`;\n\n  // Add welcome message\n  html += `\n    <div class=\"welcome\">\n        <p>Hi! I'm so happy you came in for your color analysis session. I hope you enjoyed it!</p>\n        <p>Below is your full report, showing how we discovered your perfect colors and the journey we took to find your season.</p>\n    </div>\n`;\n\n  // Add season result\n  if (finalSeason) {\n    html += `\n        <div class=\"season-result\">\n            <h2>You are a ${finalSeason}!</h2>\n            <p>Congratulations on discovering your perfect color season!</p>\n        </div>\n    `;\n  }\n\n  // Add undertone analysis\n  if (undertoneAnalysis && undertoneAnalysis.colors.length > 0) {\n    html += `\n        <div class=\"section\">\n            <h2>How Your Season Was Discovered</h2>\n            <div class=\"undertone-section\">\n                <h3>Step 1: Undertone Analysis</h3>\n                <p>We started by determining your undertone using specific test colors. This helps us understand whether you're warm or cool-toned.</p>\n                <div class=\"color-grid\">\n`;\n    \n    undertoneAnalysis.colors.forEach(color => {\n      const timestamp = color.timestamp ? \n        `${Math.floor(color.timestamp / 60)}:${(color.timestamp % 60).toString().padStart(2, '0')}` : '';\n      \n      html += `\n                    <div class=\"color-card\">\n                        <img src=\"${color.frameUrl}\" alt=\"${color.color} undertone test\" class=\"color-image\">\n                        <div class=\"color-name\">${color.color}</div>\n                        ${timestamp ? `<div class=\"timestamp\">${timestamp}</div>` : ''}\n                    </div>\n      `;\n    });\n    \n    html += `\n                </div>\n                ${undertoneAnalysis.notes ? `<div class=\"notes-section\">\n                    <h4>Undertone Analysis Notes</h4>\n                    <div class=\"notes-text\">${undertoneAnalysis.notes}</div>\n                </div>` : ''}\n            </div>\n        </div>\n    `;\n  }\n\n  // Add seasonal analysis\n  if (seasonalAnalysis && seasonalAnalysis.palettes.length > 0) {\n    html += `\n        <div class=\"palette-section\">\n            <h3>Step 2: Seasonal Analysis</h3>\n            <p>Based on your undertone, we tested seasonal palettes to find your perfect match.</p>\n            <div class=\"color-grid\">\n`;\n    \n    seasonalAnalysis.palettes.forEach(palette => {\n      const timestamp = palette.timestamp ? \n        `${Math.floor(palette.timestamp / 60)}:${(palette.timestamp % 60).toString().padStart(2, '0')}` : '';\n      \n      html += `\n                <div class=\"color-card\">\n                    <img src=\"${palette.frameUrl}\" alt=\"${palette.season} palette test\" class=\"color-image\">\n                    <div class=\"color-name\">${palette.season} Palette</div>\n                    ${timestamp ? `<div class=\"timestamp\">${timestamp}</div>` : ''}\n                </div>\n      `;\n    });\n    \n    html += `\n            </div>\n            ${seasonalAnalysis.notes ? `<div class=\"notes-section\">\n                <h4>Seasonal Analysis Notes</h4>\n                <div class=\"notes-text\">${seasonalAnalysis.notes}</div>\n            </div>` : ''}\n        </div>\n    `;\n  }\n\n  // Add individual colors from final season\n  if (individualColors && individualColors.length > 0) {\n    html += `\n        <div class=\"section\">\n            <h2>Your Perfect Colors</h2>\n            <p>Here are the specific colors from your ${finalSeason} palette that work beautifully for you:</p>\n            <div class=\"color-grid\">\n`;\n    \n    individualColors.forEach(color => {\n      const timestamp = color.timestamp ? \n        `${Math.floor(color.timestamp / 60)}:${(color.timestamp % 60).toString().padStart(2, '0')}` : '';\n      \n      html += `\n                <div class=\"color-card\">\n                    <img src=\"${color.frameUrl}\" alt=\"${color.color}\" class=\"color-image\">\n                    <div class=\"color-name\">${color.color}</div>\n                    ${timestamp ? `<div class=\"timestamp\">${timestamp}</div>` : ''}\n                </div>\n      `;\n    });\n    \n    html += `\n            </div>\n        </div>\n    `;\n  }\n\n  // Add final season determination frame\n  if (frames.finalSeason) {\n    const timestamp = frames.finalSeason.timestamp ? \n      `${Math.floor(frames.finalSeason.timestamp / 60)}:${(frames.finalSeason.timestamp % 60).toString().padStart(2, '0')}` : '';\n    \n    html += `\n        <div class=\"section\">\n            <h2>The Moment We Knew</h2>\n            <p>This is the moment when we discovered you're a ${finalSeason}!</p>\n            <div style=\"text-align: center;\">\n                <img src=\"${frames.finalSeason.url}\" alt=\"Season determination moment\" style=\"max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);\">\n                ${timestamp ? `<p style=\"color: #666; margin-top: 10px;\">${timestamp}</p>` : ''}\n            </div>\n        </div>\n    `;\n  }\n\n  html += `\n    <div style=\"text-align: center; margin-top: 40px; color: #666; font-size: 0.9em;\">\n        <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>\n        <p>Session ID: ${videoData.sessionId}</p>\n    </div>\n</body>\n</html>`;\n\n  return html;\n};\n\n// Generate the HTML report\nconst htmlReport = generateHTML(lambdaResponse);\n\nreturn {\n  sessionId: videoData.sessionId,\n  videoUrl: videoData.videoUrl,\n  finalSeason: lambdaResponse.finalSeason,\n  undertoneAnalysis: lambdaResponse.undertoneAnalysis,\n  seasonalAnalysis: lambdaResponse.seasonalAnalysis,\n  individualColors: lambdaResponse.individualColors,\n  frames: lambdaResponse.frames,\n  videoDuration: lambdaResponse.videoDuration,\n  htmlReport: htmlReport\n};"
+      },
+      "id": "generate-report",
+      "name": "Generate Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.htmlReport }}",
+        "options": {
+          "responseHeaders": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ]
+          }
+        }
+      },
+      "id": "return-html",
+      "name": "Return HTML Report",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "return-json",
+      "name": "Return JSON Data",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Video Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Video Data": {
+      "main": [
+        [
+          {
+            "node": "Start Transcription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Transcription": {
+      "main": [
+        [
+          {
+            "node": "Check Transcription Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Transcription Status": {
+      "main": [
+        [
+          {
+            "node": "Transcription Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcription Complete?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Lambda Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "main": [
+        [
+          {
+            "node": "Wait 5 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Check Transcription Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Lambda Payload": {
+      "main": [
+        [
+          {
+            "node": "Call Lambda Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Lambda Function": {
+      "main": [
+        [
+          {
+            "node": "Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Report": {
+      "main": [
+        [
+          {
+            "node": "Return HTML Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return JSON Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+} 
